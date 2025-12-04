@@ -1,8 +1,7 @@
-streamlit
-pandas
-numpy
+streamlit==1.36.0
+pandas>=2.0.3
+numpy>=1.25.0
 scikit-learn
 requests
 pickle-mixin
-
-
+gdown
