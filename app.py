@@ -4,7 +4,7 @@ import requests
 
 # paste this into app.py (replace DRIVE_FILE_ID)
 import os, pickle, time, streamlit as st
-DRIVE_FILE_ID = "PUT_YOUR_FILE_ID_HERE"
+DRIVE_FILE_ID = "1-FuqYIh95PWpcHxIySpdbp5sjwQR1B09"
 MODEL_FILENAME = "similarity.pkl"
 MAX_DOWNLOAD_ATTEMPTS = 2
 
@@ -230,6 +230,7 @@ if st.button("Recommend"):
         st.image(movie_poster[4], use_container_width=True)
 
         st.text(movie_title[4])
+
 
 
 
