@@ -5,7 +5,7 @@ import requests
 # Robust loader: download (if needed), validate, and unpickle with clear messages
 import os, pickle, time, streamlit as st
 
-DRIVE_FILE_ID = "PUT_YOUR_FILE_ID_HERE"   # <-- replace if using Google Drive
+DRIVE_FILE_ID = "1-FuqYIh95PWpcHxIySpdbp5sjwQR1B09"  # <-- replace if using Google Drive
 MODEL_FILENAME = "similarity.pkl"
 MAX_DOWNLOAD_ATTEMPTS = 2
 
@@ -234,6 +234,7 @@ if st.button("Recommend"):
         st.image(movie_poster[4], use_container_width=True)
 
         st.text(movie_title[4])
+
 
 
 
