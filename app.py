@@ -164,7 +164,7 @@ if st.button("Recommend"):
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
-        st.image(movie_poster[0], use_container_width=True)
+        show_image(movie_poster[0])
         st.text(movie_title[0])
         
 
@@ -187,3 +187,4 @@ if st.button("Recommend"):
         st.image(movie_poster[4], use_container_width=True)
 
         st.text(movie_title[4])
+
