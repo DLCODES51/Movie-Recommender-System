@@ -14,7 +14,7 @@ try:
 except Exception:
     gdown = None
 
-DRIVE_FILE_ID = "d/1-FuqYIh95PWpcHxIySpdbp5sjwQR1B09"   # replace with the id from the Drive link
+DRIVE_FILE_ID = "1-FuqYIh95PWpcHxIySpdbp5sjwQR1B09"   # replace with the id from the Drive link
 MODEL_FILENAME = "similarity.pkl"
 
 @st.cache_resource  # caches across reruns
@@ -198,4 +198,5 @@ if st.button("Recommend"):
         st.image(movie_poster[4], use_container_width=True)
 
         st.text(movie_title[4])
+
 
