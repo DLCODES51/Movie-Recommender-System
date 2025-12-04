@@ -3,115 +3,47 @@ import pickle
 import requests
 
 # Replace your old get_similarity with this robust version
+# put near top of app.py
 import os
 import pickle
 import streamlit as st
-import time
 
-DRIVE_FILE_ID = "1-FuqYIh95PWpcHxIySpdbp5sjwQR1B09"   # <- replace this
-MODEL_FILENAME = "similarity.pkl"
-MAX_DOWNLOAD_ATTEMPTS = 2
-
-def _is_probably_html(path):
-    """Simple heuristic: check start of file for HTML / text rather than pickle binary."""
-    try:
-        with open(path, "rb") as f:
-            start = f.read(512)
-        # look for common HTML/text signatures
-        if start.lstrip().lower().startswith(b"<!doctype html") or b"<html" in start.lower():
-            return True
-        # Google Drive warning pages often contain 'Google Drive' or 'quota' text
-        if b"quota" in start.lower() or b"google drive" in start.lower() or b"virus" in start.lower():
-            return True
-    except Exception:
-        return False
-    return False
-
-def _download_from_drive_with_requests(file_id, out_path):
-    import requests
-    # direct download endpoint that often works
-    url = f"https://drive.google.com/uc?export=download&id={file_id}"
-    with requests.get(url, stream=True, timeout=120) as r:
-        r.raise_for_status()
-        # If Google returns a confirmation page for large files, it'll be HTML — we'll detect that after writing
-        with open(out_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-
-def _download_from_drive_with_gdown(file_id, out_path):
+# optional: install gdown in requirements.txt
+try:
     import gdown
-    # gdown handles Google Drive confirm tokens for large files
-    url = f"https://drive.google.com/uc?id={file_id}"
-    gdown.download(url, out_path, quiet=False)
+except Exception:
+    gdown = None
 
-@st.cache_resource
+DRIVE_FILE_ID = "d/1-FuqYIh95PWpcHxIySpdbp5sjwQR1B09"   # replace with the id from the Drive link
+MODEL_FILENAME = "similarity.pkl"
+
+@st.cache_resource  # caches across reruns
 def get_similarity():
-    # If file already exists, try to load it first
-    if os.path.exists(MODEL_FILENAME):
-        try:
-            with open(MODEL_FILENAME, "rb") as f:
-                return pickle.load(f)
-        except Exception as e:
-            # corrupted or incompatible file on disk → remove and re-download
-            st.warning("Existing model file is invalid or incompatible — will re-download.")
-            try:
-                os.remove(MODEL_FILENAME)
-            except Exception:
-                pass
+    if not os.path.exists(MODEL_FILENAME):
+        if gdown is None:
+            # fallback: download via requests (works for direct links only)
+            st.info("Downloading model... (this may take a while)")
+            url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
+            # use requests streaming download
+            import requests
+            with requests.get(url, stream=True) as r:
+                r.raise_for_status()
+                with open(MODEL_FILENAME, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+        else:
+            st.info("Downloading model from Google Drive...")
+            url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
+            gdown.download(url, MODEL_FILENAME, quiet=False)
 
-    # Download attempts
-    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
-        st.info(f"Downloading model (attempt {attempt}/{MAX_DOWNLOAD_ATTEMPTS}) — this may take a minute...")
-        try:
-            # Prefer gdown if installed (handles large Drive files)
-            try:
-                import gdown  # noqa: F401
-                used = "gdown"
-            except Exception:
-                used = "requests"
+    # load and return
+    with open(MODEL_FILENAME, "rb") as f:
+        similarity = pickle.load(f)
+    return similarity
 
-            if used == "gdown":
-                _download_from_drive_with_gdown(DRIVE_FILE_ID, MODEL_FILENAME)
-            else:
-                _download_from_drive_with_requests(DRIVE_FILE_ID, MODEL_FILENAME)
-
-            # quick validation — ensure not HTML/text
-            if _is_probably_html(MODEL_FILENAME):
-                # remove and retry or fail with clear message
-                os.remove(MODEL_FILENAME)
-                st.error("Downloaded file appears to be an HTML/Drive login/quota page (not the pickle). " 
-                         "Make sure the Drive file's sharing is 'Anyone with the link' and that the link is the file (not a Google Docs preview).")
-                # don't spam retries if HTML returned — break to show error
-                break
-
-            # try to unpickle
-            with open(MODEL_FILENAME, "rb") as f:
-                similarity = pickle.load(f)
-            st.success("Model loaded successfully.")
-            return similarity
-
-        except Exception as exc:
-            # if last attempt, show the error and logs hint
-            st.warning(f"Download or unpickle attempt {attempt} failed: {exc}")
-            # small wait before retry
-            time.sleep(1)
-            if os.path.exists(MODEL_FILENAME):
-                try:
-                    os.remove(MODEL_FILENAME)
-                except Exception:
-                    pass
-            if attempt == MAX_DOWNLOAD_ATTEMPTS:
-                # Final explanatory message
-                st.error("Failed to download and load the model. Possible causes:\n"
-                         "• Google Drive returned an HTML page (permission/quota/preview) instead of the binary.\n"
-                         "• The .pkl was created with an incompatible pickle protocol or is corrupted.\n"
-                         "• The file is not actually a pickle (was re-saved incorrectly).\n\n"
-                         "Check your Streamlit logs (Manage app → Logs) for the full traceback.")
-                # Re-raise to allow full traceback in logs (Streamlit redacts message in-app)
-                raise
-    # If we exit the loop without return:
-    raise RuntimeError("Unable to download/load similarity model. See in-app messages and logs.")
+# usage
+similarity = get_similarity()
 
 
 
@@ -266,3 +198,4 @@ if st.button("Recommend"):
         st.image(movie_poster[4], use_container_width=True)
 
         st.text(movie_title[4])
+
