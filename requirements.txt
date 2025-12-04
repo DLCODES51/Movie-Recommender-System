@@ -4,4 +4,3 @@ numpy>=1.25.0
 scikit-learn
 requests
 pickle-mixin
-gdown
