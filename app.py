@@ -2,79 +2,83 @@ import streamlit as st
 import pickle 
 import requests
 
-# paste this into app.py (replace DRIVE_FILE_ID)
+# Robust loader: download (if needed), validate, and unpickle with clear messages
 import os, pickle, time, streamlit as st
-DRIVE_FILE_ID = "1-FuqYIh95PWpcHxIySpdbp5sjwQR1B09"
+
+DRIVE_FILE_ID = "PUT_YOUR_FILE_ID_HERE"   # <-- replace if using Google Drive
 MODEL_FILENAME = "similarity.pkl"
 MAX_DOWNLOAD_ATTEMPTS = 2
 
-def _is_probably_html(path):
+def _looks_like_html(path):
     try:
         with open(path,"rb") as f:
-            s = f.read(512)
-        if s.lstrip().lower().startswith(b"<!doctype html") or b"<html" in s.lower():
+            start = f.read(512)
+        if start.lstrip().lower().startswith(b"<!doctype html") or b"<html" in start.lower():
             return True
-        if b"quota" in s.lower() or b"google drive" in s.lower() or b"virus" in s.lower():
+        if b"quota" in start.lower() or b"google drive" in start.lower():
             return True
     except Exception:
         return False
     return False
 
-def _download_with_gdown(file_id, out_path):
+def _download_gdrive(file_id, out):
     import gdown
     url = f"https://drive.google.com/uc?id={file_id}"
-    gdown.download(url, out_path, quiet=False)
+    gdown.download(url, out, quiet=False)
 
-def _download_with_requests(file_id, out_path):
+def _download_requests(file_id, out):
     import requests
     url = f"https://drive.google.com/uc?export=download&id={file_id}"
     with requests.get(url, stream=True, timeout=120) as r:
         r.raise_for_status()
-        with open(out_path,"wb") as f:
+        with open(out,"wb") as f:
             for chunk in r.iter_content(8192):
                 if chunk:
                     f.write(chunk)
 
 @st.cache_resource
 def get_similarity():
+    # 1) try local file first
     if os.path.exists(MODEL_FILENAME):
         try:
             with open(MODEL_FILENAME,"rb") as f:
                 return pickle.load(f)
-        except Exception:
+        except Exception as e:
+            st.warning(f"Local similarity.pkl invalid: {type(e).__name__} — will redownload.")
             try: os.remove(MODEL_FILENAME)
             except: pass
-            st.warning("Local copy invalid — re-downloading.")
 
+    # 2) download attempts
     for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS+1):
-        st.info(f"Downloading model (attempt {attempt})...")
+        st.info(f"Downloading similarity model (attempt {attempt}/{MAX_DOWNLOAD_ATTEMPTS})...")
         try:
             try:
                 import gdown
-                _download_with_gdown(DRIVE_FILE_ID, MODEL_FILENAME)
+                _download_gdrive(DRIVE_FILE_ID, MODEL_FILENAME)
             except Exception:
-                _download_with_requests(DRIVE_FILE_ID, MODEL_FILENAME)
+                _download_requests(DRIVE_FILE_ID, MODEL_FILENAME)
 
-            if _is_probably_html(MODEL_FILENAME):
+            if _looks_like_html(MODEL_FILENAME):
                 os.remove(MODEL_FILENAME)
-                st.error("Downloaded file looks like an HTML/Drive error page. Ensure sharing is 'Anyone with the link'.")
+                st.error("Downloaded file appears to be HTML (Drive preview/permission/quota) — check Drive sharing & link.")
                 break
 
             with open(MODEL_FILENAME,"rb") as f:
                 sim = pickle.load(f)
-            st.success("Model loaded.")
+            st.success("Model loaded successfully.")
             return sim
 
         except Exception as exc:
-            st.warning(f"Attempt {attempt} failed: {exc}")
+            st.warning(f"Attempt {attempt} failed: {type(exc).__name__}: {exc}")
             time.sleep(1)
             if os.path.exists(MODEL_FILENAME):
                 try: os.remove(MODEL_FILENAME)
                 except: pass
             if attempt == MAX_DOWNLOAD_ATTEMPTS:
-                st.error("Failed to download/unpickle model. Check Drive sharing, model integrity, or view app logs.")
+                st.error("Failed to download/unpickle model. Check Drive sharing, file integrity, or application logs.")
                 raise
     raise RuntimeError("Could not load similarity model.")
+
 
 
 
@@ -230,6 +234,7 @@ if st.button("Recommend"):
         st.image(movie_poster[4], use_container_width=True)
 
         st.text(movie_title[4])
+
 
 
 
