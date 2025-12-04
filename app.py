@@ -2,6 +2,18 @@ import streamlit as st
 import pickle 
 import requests
 
+# compatibility wrapper for st.image between Streamlit versions
+import streamlit as st
+
+def show_image(img, **kwargs):
+    """Call st.image in a way that works with both old and new Streamlit versions."""
+    try:
+        # prefer new param name
+        st.image(img, use_container_width=True, **kwargs)
+    except TypeError:
+        # fallback for older Streamlit
+        st.image(img, use_column_width=True, **kwargs)
+
 
 # Background image URL
 background_url = "https://assets.nflxext.com/ffe/siteui/vlv3/8200f588-2e93-4c95-8eab-ebba17821657/web/IN-en-20250616-TRIFECTA-perspective_9cbc87b2-d9bb-4fa8-9f8f-a4fe8fc72545_large.jpg"
@@ -173,4 +185,5 @@ if st.button("Recommend"):
 
     with col5:
         st.image(movie_poster[4], use_container_width=True)
+
         st.text(movie_title[4])
