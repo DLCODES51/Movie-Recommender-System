@@ -8,7 +8,7 @@ import pickle
 import streamlit as st
 import time
 
-DRIVE_FILE_ID = "PUT_YOUR_FILE_ID_HERE"   # <- replace this
+DRIVE_FILE_ID = "1-FuqYIh95PWpcHxIySpdbp5sjwQR1B09"   # <- replace this
 MODEL_FILENAME = "similarity.pkl"
 MAX_DOWNLOAD_ATTEMPTS = 2
 
@@ -264,4 +264,5 @@ if st.button("Recommend"):
         
     with col5:
         st.image(movie_poster[4], use_container_width=True)
+
         st.text(movie_title[4])
